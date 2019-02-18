@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,14 +54,15 @@ namespace Test1
             Console.WriteLine("After shenanigans");
             t1.PrintIt();
             t2.PrintIt();
-            
+
             Console.WriteLine();
             Console.WriteLine("================================");
             Console.WriteLine();
             Console.WriteLine("Before removing student (without loading enrollments):");
             PrintDatabase();
 
-            using (var db = new MyContext()) {
+            using (var db = new MyContext())
+            {
                 db.Remove(db.Students.Where(s => s.Id == 2).First());
                 db.SaveChanges();
             }
@@ -68,14 +70,15 @@ namespace Test1
             Console.WriteLine();
             Console.WriteLine("After removing student (without loading enrollments):");
             PrintDatabase();
-            
+
             Console.WriteLine();
             Console.WriteLine("================================");
             Console.WriteLine();
             Console.WriteLine("Before removing student (WITH loading enrollments):");
             PrintDatabase();
 
-            using (var db = new MyContext()) {
+            using (var db = new MyContext())
+            {
                 db.Remove(db.Students.Where(s => s.Id == 1).Include(s => s.Enrollments).First());
                 db.SaveChanges();
             }
@@ -83,6 +86,20 @@ namespace Test1
             Console.WriteLine();
             Console.WriteLine("After removing student (WITH loading enrollments):");
             PrintDatabase();
+
+            Console.WriteLine();
+            using (var db = new MyContext())
+            {
+                Console.WriteLine("Remaining student:");
+                foreach (var student in db.Students.Include(s => s.Enrollments).ThenInclude(e => e.Lesson).ToList())
+                {
+                    Console.WriteLine($"  Name: {student.Name}");
+                    foreach (var lesson in student.Enrollments.Select(e => e.Lesson))
+                    {
+                        Console.WriteLine($"  Lesson: {lesson.Name}");
+                    }
+                }
+            }
 
             Console.ReadLine();
         }
@@ -108,7 +125,7 @@ namespace Test1
                 Console.WriteLine("Enrollments:");
                 foreach (var enrollment in db.Enrollments)
                 {
-                    Console.WriteLine($"Enrollment: id: {enrollment.Id}");
+                    Console.WriteLine($"Enrollment: id: {db.Entry(enrollment).Metadata.FindPrimaryKey()}");
                 }
             }
         }

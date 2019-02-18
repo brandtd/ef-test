@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Test1
@@ -18,42 +19,33 @@ namespace Test1
                 Student chris = new Student { Name = "Chris" };
                 Student danny = new Student { Name = "Danny" };
 
-                science.Roll = new RollList { Lesson = science };
-                math.Roll = new RollList { Lesson = math };
-                boring.Roll = new RollList { Lesson = boring };
+                List<Enrollment> enrollments = new List<Enrollment>();
 
-                jamie.LessonPlan = new LessonPlan { Student = jamie };
-                chris.LessonPlan = new LessonPlan { Student = chris };
-                danny.LessonPlan = new LessonPlan { Student = danny };
-
-                jamie.LessonPlan.Lessons.Add(science);
-                jamie.LessonPlan.Lessons.Add(math);
-                science.Roll.Students.Add(jamie);
-                math.Roll.Students.Add(jamie);
-
-                chris.LessonPlan.Lessons.Add(math);
-                chris.LessonPlan.Lessons.Add(boring);
-                math.Roll.Students.Add(chris);
-                boring.Roll.Students.Add(chris);
-
-                danny.LessonPlan.Lessons.Add(boring);
-                danny.LessonPlan.Lessons.Add(science);
-                boring.Roll.Students.Add(danny);
-                science.Roll.Students.Add(danny);
+                enrollments.Add(new Enrollment { Student = jamie, Lesson = science });
+                enrollments.Add(new Enrollment { Student = jamie, Lesson = math });
+                enrollments.Add(new Enrollment { Student = chris, Lesson = math });
+                enrollments.Add(new Enrollment { Student = chris, Lesson = boring });
+                enrollments.Add(new Enrollment { Student = danny, Lesson = boring });
+                enrollments.Add(new Enrollment { Student = danny, Lesson = science });
 
                 db.Lessons.Add(science);
                 db.Lessons.Add(math);
                 db.Lessons.Add(boring);
+                db.Students.Add(jamie);
+                db.Students.Add(chris);
+                db.Students.Add(danny);
+                db.Enrollments.AddRange(enrollments);
                 db.SaveChanges();
             }
 
-            DoAThing t1 = new DoAThing(new MyContext());
-            DoAThing t2 = new DoAThing(new MyContext());
+            RenameWithoutChangingContext t1 = new RenameWithoutChangingContext(new MyContext());
+            RenameWithoutChangingContext t2 = new RenameWithoutChangingContext(new MyContext());
             Console.WriteLine("Before any shenanigans");
             t1.PrintIt();
             t2.PrintIt();
 
             Console.WriteLine();
+            Console.WriteLine("================================");
             Console.WriteLine("Changing name under one context");
             t1.SetIt("new name");
 
@@ -61,6 +53,36 @@ namespace Test1
             Console.WriteLine("After shenanigans");
             t1.PrintIt();
             t2.PrintIt();
+            
+            Console.WriteLine();
+            Console.WriteLine("================================");
+            Console.WriteLine();
+            Console.WriteLine("Before removing student (without loading enrollments):");
+            PrintDatabase();
+
+            using (var db = new MyContext()) {
+                db.Remove(db.Students.Where(s => s.Id == 2).First());
+                db.SaveChanges();
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("After removing student (without loading enrollments):");
+            PrintDatabase();
+            
+            Console.WriteLine();
+            Console.WriteLine("================================");
+            Console.WriteLine();
+            Console.WriteLine("Before removing student (WITH loading enrollments):");
+            PrintDatabase();
+
+            using (var db = new MyContext()) {
+                db.Remove(db.Students.Where(s => s.Id == 1).Include(s => s.Enrollments).First());
+                db.SaveChanges();
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("After removing student (WITH loading enrollments):");
+            PrintDatabase();
 
             Console.ReadLine();
         }
@@ -83,24 +105,17 @@ namespace Test1
                 }
 
                 Console.WriteLine();
-                Console.WriteLine("Lesson Plans:");
-                foreach (var plan in db.LessonPlans)
+                Console.WriteLine("Enrollments:");
+                foreach (var enrollment in db.Enrollments)
                 {
-                    Console.WriteLine($"Lesson Plan: id: {plan.Id}");
-                }
-
-                Console.WriteLine();
-                Console.WriteLine("Roll Lists:");
-                foreach (var roll in db.RollLists)
-                {
-                    Console.WriteLine($"Roll List: id: {roll.Id}");
+                    Console.WriteLine($"Enrollment: id: {enrollment.Id}");
                 }
             }
         }
 
-        public class DoAThing
+        public class RenameWithoutChangingContext
         {
-            public DoAThing(MyContext db)
+            public RenameWithoutChangingContext(MyContext db)
             {
                 _db = db;
             }
